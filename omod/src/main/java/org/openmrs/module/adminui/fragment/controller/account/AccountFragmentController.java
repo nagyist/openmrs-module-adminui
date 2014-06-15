@@ -12,11 +12,11 @@
  * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
  */
 
-package org.openmrs.module.admintoolsui.fragment.controller.account;
+package org.openmrs.module.adminui.fragment.controller.account;
 
 import org.openmrs.Person;
-import org.openmrs.module.emrapi.account.AccountDomainWrapper;
-import org.openmrs.module.emrapi.account.AccountService;
+import org.openmrs.module.adminui.account.AccountDomainWrapper;
+import org.openmrs.module.adminui.account.AccountService;
 import org.openmrs.ui.framework.UiUtils;
 import org.openmrs.ui.framework.annotation.SpringBean;
 import org.openmrs.ui.framework.fragment.action.FailureResult;
@@ -35,7 +35,7 @@ public class AccountFragmentController {
 
         try {
             AccountDomainWrapper account = accountService.getAccountByPerson(person);
-            account.unlock();
+            //account.unlock();
             return new SuccessResult(ui.message("emr.account.unlocked.successMessage"));
         } catch (Exception e) {
             return new FailureResult(ui.message("emr.account.unlock.failedMessage"));

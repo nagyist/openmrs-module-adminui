@@ -1,24 +1,16 @@
 <%
     ui.decorateWith("appui", "standardEmrPage")
 
-    ui.includeCss("mirebalais", "account.css")
-    ui.includeJavascript("emr", "account/account.js")
+    ui.includeJavascript("adminui", "account/account.js")
 
     def createAccount = (account.person.personId == null ? true : false);
 
-    def genderOptions = [ [label: ui.message("emr.gender.M"), value: 'M'],
-                          [label: ui.message("emr.gender.F"), value: 'F'] ]
+    def genderOptions = [ [label: ui.message("adminui.gender.M"), value: 'M'],
+                          [label: ui.message("adminui.gender.F"), value: 'F'] ]
 
     def privilegeLevelOptions = []
     privilegeLevels.each {
         privilegeLevelOptions.push([ label: ui.format(it), value: it.name ])
-    }
-
-    def allowedLocalesOptions = []
-    allowedLocales.each {
-        def displayLanguage = it.getDisplayLanguage(emrContext.userContext.locale);
-        if (displayLanguage == "Haitian") { displayLanguage = "Haitian Creole" };  // Hack to fix the fact that ISO standard lists Creole as "Haitian"
-        allowedLocalesOptions.push([ label: displayLanguage, value: it ]);
     }
 
     def providerRolesOptions = []
@@ -31,12 +23,104 @@
 <script type="text/javascript">
     var breadcrumbs = [
         { icon: "icon-home", link: '/' + OPENMRS_CONTEXT_PATH + '/index.htm' },
-        { label: "${ ui.message("emr.app.systemAdministration.label")}", link: '${ui.pageLink("coreapps", "systemadministration/systemAdministration")}' },
-        { label: "${ ui.message("emr.task.accountManagement.label")}" , link: '${ui.pageLink("emr", "account/manageAccounts")}'},
-        { label: "${ ui.message("emr.createAccount")}" }
+        { label: "${ ui.message("adminui.app.accountManager.label")}" , link: '${ui.pageLink("adminui", "account/manageAccounts")}'},
+        { label: "${ ui.message("adminui.createAccount.accountManagement.label")}" }
 
     ];
 </script>
+
+
+
+<script type="text/javascript">
+
+var tabs = 1;
+
+function addTab() {
+
+    ++tabs;
+    jq('#countTabs').val(parseInt(jq('#countTabs').val(),10)+1);
+    
+    // hide other tabs
+    jq("#tabs li").removeClass("current ui-tabs-active ui-state-active");
+    jq("#tabContent div").hide();
+
+    // add new tab and related tabContent
+    jq("#tabs").append("<li class='current ui-tabs-active ui-state-active'><a class='tab' id='user"+tabs+"' href='#ui-tabs'>User "+(tabs)+"</a><a href='#ui-tabs' class='remove'>x</a></li>");
+    
+    jq("#tabContent").append("<div id='user"+tabs+"_tabContent'>"+
+        
+            "<p><label>Username</label> <input type='text' id='user"+tabs+"_username' name='user"+tabs+"_username'></p>" +
+            "<p><label>Password</label> <input type='password' id='user"+tabs+"_password' name='user"+tabs+"_password'></p>" +
+            "<p><label>Confirm Password</label> <input type='password' id='user"+tabs+"_confirmPassword' name='user"+tabs+"_confirmPassword'></p>" +
+            "<p><label>Privilege Level</label> <select name='user"+tabs+"_privilegeLevel'>" + <% privilegeLevels.each{ %> "<option value='$it'>$it</option>" + <% } %> "</select></p>" +
+            "<p><label>Roles</label>" + <% capabilities.each{ %> "<p><input type='checkbox' name='user"+tabs+"_capabilities' value='$it'>$it</p>" + <% } %> "</p>" +
+               
+            "</div>");
+    
+    // set the newly added tab as current
+    jq("#user"+tabs+"_tabContent").show();
+
+    // focus on new tabs's username field
+    jq("#user"+tabs+"_username").focus();
+    
+}
+
+jq(document).ready(function() {
+
+    jq('#tabs a.tab').live('click', function() {
+        // Get the tab name
+        var tabContentname = \$(this).attr("id") + "_tabContent";
+   
+        // hide all other tabs
+        jq("#tabContent div").hide();
+        jq("#tabs li").removeClass("current ui-tabs-active ui-state-active");
+    
+        // show current tab
+        jq("#" + tabContentname).show();
+        jq(this).parent().addClass("current ui-tabs-active ui-state-active")
+    });
+
+
+
+    jq('#tabs a.remove').live('click', function() {
+    
+        --tabs;
+        jq("#countTabs").val(tabs);
+
+        // Get the tab name
+        var tabid = \$(this).parent().find(".tab").attr("id");
+    
+        // remove tab and related tabContent
+        var tabContentname = tabid + "_tabContent";
+    
+        jq("#" + tabContentname).remove();
+        jq(this).parent().remove();
+
+        // if there is no current tab and if there are still tabs left, show the first one
+        if (\$("#tabs li.ui-state-active").length == 0 && \$("#tabs li").length > 0) {
+            // find the first tab
+            var firsttab = \$("#tabs li:first-child");
+            firsttab.addClass("current ui-tabs-active ui-state-active");
+    
+            // get its link name and show related tabContent
+            var firsttabid = \$(firsttab).find("a.tab").attr("id");
+            \$("#" + firsttabid + "_tabContent").show();
+        } 
+    });
+
+
+    // change the tab's name to its corresponding username
+    jq('[id\$=_username]').live('change', function(){     
+        var fieldID = this.id;
+        var tabID = fieldID.replace(/_username/,'');
+        jq("#"+tabID).text(\$("#"+fieldID).val());
+    });
+
+});
+
+</script>
+
+
 
 <style type="text/css">
     #unlock-button {
@@ -44,39 +128,28 @@
     }
 </style>
 
-<% if (account.locked) { %>
-    <div id="locked-warning" class="note warning">
-        <div class="icon"><i class="icon-warning-sign medium"></i></div>
-        <div class="text">
-            <p><strong>${ ui.message("emr.account.locked.title") }</strong></p>
-            <p><em>${ ui.message("emr.account.locked.description") }</em></p>
 
-            <button id="unlock-button" value="${ account.person.personId }">${ ui.message("emr.account.locked.button") }</button>
-
-        </div>
-    </div>
-<% } %>
-
-<h3>${ (createAccount) ? ui.message("emr.createAccount") : ui.message("emr.editAccount") }</h3>
+<h3>${ (createAccount) ? ui.message("adminui.createAccount") : ui.message("adminui.editAccount") }</h3>
 
 <form method="post" id="accountForm">
 	<fieldset>
-		<legend>${ ui.message("emr.person.details") }</legend>
+		<legend><b>${ ui.message("adminui.person.details") }</b></legend>
 
         ${ ui.includeFragment("uicommons", "field/text", [
-            label: ui.message("emr.person.familyName"),
+            label: ui.message("adminui.person.familyName"),
             formFieldName: "familyName", 
             initialValue: (account.familyName ?: '')
         ])}
 
+
         ${ ui.includeFragment("uicommons", "field/text", [
-                label: ui.message("emr.person.givenName"),
+                label: ui.message("adminui.person.givenName"),
                 formFieldName: "givenName",
                 initialValue: (account.givenName ?: '')
         ])}
 
         ${ ui.includeFragment("uicommons", "field/radioButtons", [
-            label: ui.message("emr.gender"),
+            label: ui.message("adminui.gender"),
             formFieldName: "gender", 
             initialValue: (account.gender ?: 'M'), 
             options: genderOptions 
@@ -84,108 +157,130 @@
 	</fieldset>
 	
 	<fieldset>
-		<legend>${ ui.message("emr.user.account.details") }</legend>
-		<div class="emr_userDetails" <% if (!account.user) { %> style="display: none" <% } %>>
-
-            ${ ui.includeFragment("emr", "field/checkbox", [ 
-                label: ui.message("emr.user.enabled"), 
+		<legend><b>${ ui.message("adminui.user.account.details") }</b></legend>
+		
+		${ ui.includeFragment("adminui", "field/checkbox", [ 
+                label: ui.message("adminui.user.enabled"), 
                 id: "userEnabled", 
-                formFieldName: "userEnabled", 
+                formFieldName: "userEnabled",
                 value: "true", 
-                checked: account.userEnabled 
+                checked: (account.user ?: '') 
             ])}
+		
+		<div class="emr_userDetails" <% if (!account.user) { %> style="display: none" <% } %>>
+		<br>
+			
+			
+			<div>
+                <a class="button task" href="#ui-tabs" onclick="addTab()">
+                <i class="icon-plus"></i>
+                    Add User
+                </a>
 
-            ${ ui.includeFragment("uicommons", "field/text", [
-                label: ui.message("emr.user.username"), 
-                formFieldName: "username", 
-                initialValue: (account.username ?: '') 
-            ])}
+                <br><br>
 
-            <% if (!account.password && !account.confirmPassword) { %>
-                <button class="emr_passwordDetails emr_userDetails" type="button" onclick="javascript:jQuery('.emr_passwordDetails').toggle()">${ ui.message("emr.user.changeUserPassword") }</button>
-                <p></p>
-            <% } %>
+                <input type="hidden" id="countTabs" name="countTabs" value="1">
 
-            <p class="emr_passwordDetails" <% if(!account.password && !account.confirmPassword) { %>style="display: none"<% } %>>
-                <label class="form-header" for="password">${ ui.message("emr.user.password") }</label>
-                <input type="password" id="password" name="password" value="${ account.password ?: ''}" autocomplete="off"/>
-                <label id="format-password">${ ui.message("emr.account.passwordFormat") }</label>
-                ${ ui.includeFragment("uicommons", "fieldErrors", [ fieldName: "password" ])}
-            </p>
+                <div class="ui-tabs">
+                    <ul id="tabs" class="ui-tabs-nav ui-helper-reset ui-helper-clearfix ui-widget-header ui-corner-all" role="tablist">
+            
+                        <li class="ui-state-default ui-corner-top ui-tabs-active ui-state-active">
+                            <a class="tab" href="#ui-tabs" id="user1">
+                                User 1
+                            </a>
+                        </li>
+        
+                    </ul>
+    
+                    <div id="tabContent" class="ui-tabs-panel ui-widget-tabContent ui-corner-bottom">
+                        <div id="user1_tabContent">
 
-            <p class="emr_passwordDetails" <% if(!account.password && !account.confirmPassword) { %>style="display: none"<% } %>>
-                <label class="form-header" for="confirmPassword">${ ui.message("emr.user.confirmPassword") }</label>
-                <input type="password" id="confirmPassword" name="confirmPassword" value="${ account.confirmPassword ?: '' }" autocomplete="off" />
-                ${ ui.includeFragment("uicommons", "fieldErrors", [ fieldName: "confirmPassword" ])}
-            </p>
+                            <p><label>Username</label> 
+                                <input type='text' id='user1_username' name='user1_username'>
+                            </p> 
+                            
+                            <p><label>Password</label> 
+                                <input type='password' id='user"1_password' name='user1_password'>
+                            </p>
 
-            ${ ui.includeFragment("uicommons", "field/dropDown", [
-                label: ui.message("emr.user.privilegeLevel"), 
-                emptyOptionLabel: ui.message("emr.chooseOne"), 
-                formFieldName: "privilegeLevel", 
-                initialValue: (account.privilegeLevel ? account.privilegeLevel.getName() : ''), 
-                options: privilegeLevelOptions
-            ])}
+                            <p><label>Confirm Password</label> 
+                                <input type='password' id='user1_confirmPassword' name='user1_confirmPassword'>
+                            </p>
 
-            <p>
-                ${ ui.includeFragment("uicommons", "field/dropDown", [
-                    label: ui.message("emr.user.defaultLocale"), 
-                    emptyOptionLabel: ui.message("emr.chooseOne"), 
-                    formFieldName: "defaultLocale", 
-                    initialValue: (account.defaultLocale ?: ''), 
-                    options: allowedLocalesOptions 
-                ])}
-            </p>
+                            <p><label>Privilege Level</label>
+                                <select name='user1_privilegeLevel'>
+                                <% privilegeLevels.each{ %>
+                                    <option value="$it">$it</option>
+                                <% } %>
+                                </select>
+                            </p>
 
-            <p>
-                <strong>${ ui.message("emr.user.Capabilities") }</strong>
-            </p>
+                            <p><label>Roles</label>
+                                <% capabilities.each{ %>
+                                    <p>
+                                        <input type='checkbox' name='user1_capabilities' value="$it">$it
+                                    </p>
+                                <% } %>
+                            </p>
 
-			<% capabilities.each{ %>
-                ${ ui.includeFragment("emr", "field/checkbox", [ 
-                    label: ui.format(it),
-                    formFieldName: "capabilities", 
-                    value: it.name, 
-                    checked: account.capabilities?.contains(it) 
-                ])}
-            <% } %>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
 		</div>
+
+
+
 		<div class="emr_userDetails">
 			<% if(!account.user) { %>
-				<button id="createUserAccountButton" type="button" onclick="javascript:emr_createUserAccount()"> ${ ui.message("emr.user.createUserAccount") }</button>
+				<button id="createUserAccountButton" type="button" onclick="javascript:emr_createUserAccount()"> ${ ui.message("adminui.user.createUserAccount") }</button>
 			<% } %>
 		</div>
 	</fieldset>
 	
 	<fieldset>
-		<legend>${ ui.message("emr.provider.details") }</legend>
-		<div class="emr_providerDetails">
+		<legend><b>${ ui.message("adminui.provider.details") }</b></legend>
+		
+		${ ui.includeFragment("adminui", "field/checkbox", [ 
+                label: ui.message("adminui.provider.enabled"), 
+                id: "providerEnabled", 
+                formFieldName: "providerEnabled", 
+                value: "true", 
+                 
+            ])}
+            
+		<div class="emr_providerDetails" <% if (1) { %> style="display: none" <% } %> >
+            <br>
             <p>
-                ${ ui.includeFragment("uicommons", "field/dropDown", [
-                        label: ui.message("emr.account.providerRole.label"),
-                        emptyOptionLabel: ui.message("emr.chooseOne"),
-                        formFieldName: "providerRole",
-                        initialValue: (account.providerRole?.id ?: ''),
-                        options: providerRolesOptions
-                ])}
+                ${ ui.message("Provider Role (You can choose more than one)") }
             </p>
-
-
+            
+            <% providerRoles.each{ %>
+                ${ ui.includeFragment("adminui", "field/checkbox", [ 
+                    label: ui.format(it),
+                    formFieldName: "providerRoles", 
+                    value: it.id, 
+                    checked: account.providerSet?.contains(it)
+                ])}
+            <% } %>
+            
         </div>
-        <!-- TODO: put this back in (and hide the emr_providers div if !account.provider) once we make providers optional again -->
-        <!--
+
 		<div class="emr_providerDetails">
-		<% if(!account.provider) { %>
-			<button id="createProviderAccountButton" type="button" onclick="javascript:emr_createProviderAccount()">${ ui.message("emr.provider.createProviderAccount") }</button>
-		<% } %>
+			<% if(1) { %>
+				<button id="createProviderAccountButton" type="button" onclick="javascript:emr_createProviderAccount()">${ ui.message("adminui.provider.createProviderAccount") }</button>
+			<% } %>
 		</div>
-		-->
+		
 
 	</fieldset>
 
-    <div>
-        <input type="button" class="cancel" value="${ ui.message("emr.cancel") }" onclick="javascript:window.location='/${ contextPath }/emr/account/manageAccounts.page'" />
-        <input type="submit" class="confirm" id="save-button" value="${ ui.message("emr.save") }"  />
+    <div id>
+        <input type="button" class="cancel" value="${ ui.message("adminui.cancel") }" onclick="javascript:window.location='/${ contextPath }/adminui/account/manageAccounts.page'" />
+        <input type="submit" class="confirm" id="save-button" value="${ ui.message("adminui.save") }"  />
     </div>
 
 </form>

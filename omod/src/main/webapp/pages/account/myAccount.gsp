@@ -7,15 +7,15 @@
 <script type="text/javascript">
     var breadcrumbs = [
         { icon: "icon-home", link: '/' + OPENMRS_CONTEXT_PATH + '/index.htm' },
-        { label: "${ ui.message("emr.app.system.administration.myAccount.label")}" }
+        { label: "${ ui.message("adminui.app.myAccount.label")}" }
     ];
 </script>
 
 <div id="tasks">
-    <a class="button big" href="${ ui.pageLink("admintoolsui", "account/changlePassword") }">
+    <a class="button app big" href="${ ui.pageLink("adminui", "account/changePassword") }">
         <div class="task">
-            <i class="icon-book"></i>
-            ${ ui.message("emr.task.myAccount.changePassword.label") }
+            <i class="icon-unlock"></i>
+            ${ ui.message("adminui.myAccount.changePassword.label") }
         </div>
     </a>
 </div>
